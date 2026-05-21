@@ -5,7 +5,7 @@ def run(pesquisa):
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
-            headless=False,
+            headless=True,
             args=[
                 "--disable-blink-features=AutomationControlled"
             ]
@@ -29,10 +29,10 @@ def run(pesquisa):
             })
         """)
 
-        page.goto("https://www.amazon.com/",)
+        page.goto("https://www.amazon.com.br",)
         espera(2, 4)
         mover_mouse(page)
-        search = page.get_by_role("searchbox", name="Search Amazon")
+        search = page.get_by_role("searchbox", name="Pesquisar Amazon.com.br")
         espera(1, 2)
         digitar_humano(search, pesquisa)
         espera(1, 2)
@@ -47,11 +47,11 @@ def run(pesquisa):
 
         for i in range(min(cards.count(), 10)):
             card = cards.nth(i)
-            titulo = card.locator("h2").inner_text()
+            titulo = card.locator("h2").first.inner_text()
             preco = card.locator(".a-price").first.inner_text()
             link = card.locator("a").first.get_attribute("href")
             if link and link.startswith("/"):
-                link = "https://www.amazon.com" + link
+                link = "https://www.amazon.com.br" + link
 
             print(f"Título: {titulo}")
             print(f"Preço: {preco}")
