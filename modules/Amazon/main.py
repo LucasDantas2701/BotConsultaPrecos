@@ -1,8 +1,10 @@
 import os
 from playwright.sync_api import sync_playwright
+from modules.Amazon.lista import amazon_locators
 from shared.block_pass.humanizer import espera, mover_mouse, digitar_humano
 state_path = "assets/amazon_state.json"
-def run(pesquisa):
+
+def amazon(pesquisa):
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
@@ -31,7 +33,7 @@ def run(pesquisa):
             })
         """)
 
-        page.goto("https://www.amazon.com.br",)
+        page.goto(amazon_locators["url"])
         espera(2, 4)
         mover_mouse(page)
         search = page.get_by_role("searchbox", name="Pesquisar Amazon.com.br")
@@ -45,7 +47,7 @@ def run(pesquisa):
             print("Buscando produtos...\n")
 
             # cards dos produtos
-            cards = page.locator('div[role="listitem"][data-asin]')
+            cards = page.locator(amazon_locators["card"])
             mostrados = 0
             if cards.count() > 0:
                 print(f"Quantidade de produtos encontrados: {cards.count()}")
@@ -56,11 +58,11 @@ def run(pesquisa):
                         break
                     try:
                         card = cards.nth(i)
-                        titulo = card.locator("h2").first.inner_text()
-                        preco = card.locator("span.a-offscreen").first.inner_text()
-                        link = card.locator("a").first.get_attribute("href")
+                        titulo = card.locator(amazon_locators["titulo"]).first.inner_text()
+                        preco = card.locator(amazon_locators["preco"]).first.inner_text()
+                        link = card.locator(amazon_locators["link"]).first.get_attribute("href")
                         if link and link.startswith("/"):
-                            link = "https://www.amazon.com.br" + link
+                            link = amazon_locators["url"] + link
 
                         print(f"{titulo}")
                         print(f"Preço: {preco}")
@@ -79,4 +81,3 @@ def run(pesquisa):
         context.storage_state(path="assets/amazon_state.json")
         context.close()
         browser.close()
-
