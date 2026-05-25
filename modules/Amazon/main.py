@@ -1,19 +1,17 @@
 import os
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 from modules.Amazon.lista import amazon_locators
 from shared.block_pass.humanizer import espera, mover_mouse, digitar_humano
+
 state_path = "assets/amazon_state.json"
 
-def amazon(pesquisa):
-
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            headless=False,
-            args=[
-                "--disable-blink-features=AutomationControlled"
-            ]
+async def amazon(pesquisa):
+    async with async_playwright() as playwright:
+        browser = await playwright.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"]
         )
-        context = browser.new_context(
+        context = await browser.new_context(
             storage_state=state_path if os.path.exists(state_path) else None,
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -23,61 +21,49 @@ def amazon(pesquisa):
             viewport={"width": 1366, "height": 768},
             locale="pt-BR"
         )
-
-        page = context.new_page()
-
-        # remove webdriver
-        page.add_init_script("""
+        page = await context.new_page()
+        await page.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {
                 get: () => undefined
             })
         """)
-
-        page.goto(amazon_locators["url"])
+        await page.goto(amazon_locators["url"])
         espera(2, 4)
-        mover_mouse(page)
+        await mover_mouse(page)
         search = page.get_by_role("searchbox", name="Pesquisar Amazon.com.br")
-
-        if search.is_visible():
+        resultados = []
+        if await search.is_visible():
             espera(1, 2)
-            digitar_humano(search, pesquisa)
+            await digitar_humano(search, pesquisa)
             espera(1, 2)
-            search.press("Enter")
+            await search.press("Enter")
             espera(3, 5)
-            print("Buscando produtos...\n")
-
-            # cards dos produtos
             cards = page.locator(amazon_locators["card"])
             mostrados = 0
-            if cards.count() > 0:
-                print(f"Quantidade de produtos encontrados: {cards.count()}")
-                print("\nMostrando os 5 primeiros:\n")
-
-                for i in range(cards.count()):
-                    if mostrados == 5:
+            if await cards.count() > 0:
+                for i in range(await cards.count()):
+                    if mostrados == 2:
                         break
                     try:
                         card = cards.nth(i)
-                        titulo = card.locator(amazon_locators["titulo"]).first.inner_text()
-                        preco = card.locator(amazon_locators["preco"]).first.inner_text()
-                        link = card.locator(amazon_locators["link"]).first.get_attribute("href")
-                        if link and link.startswith("/"):
+                        titulo = await card.locator(amazon_locators["titulo"]).first.inner_text()
+                        preco = await card.locator(amazon_locators["preco"]).first.inner_text()
+                        link = await card.locator(amazon_locators["link"]).first.get_attribute("href")
+                        if not titulo or not preco or not link:
+                            continue
+                        if link.startswith("/"):
                             link = amazon_locators["url"] + link
-
-                        print(f"{titulo}")
-                        print(f"Preço: {preco}")
-                        print(f"Link: {link}")
-                        print("-" * 50)
-                        print("\n")
+                        resultado = (
+                            f"🟦 AMAZON\n\n"
+                            f'<a href="{link}">{titulo}</a>\n'
+                            f'💰 Preço: {preco}\n\n'
+                        )
+                        resultados.append(resultado)
                         mostrados += 1
-                    except:
-                        pass
-            else:
-                print("produtos não encontrados")
-            
-        else:
-            print("barra de pesquisa não encontrada")
-
-        context.storage_state(path="assets/amazon_state.json")
-        context.close()
-        browser.close()
+                    except Exception as e:
+                        print(e)
+                        continue
+        await context.storage_state(path=state_path)
+        await context.close()
+        await browser.close()
+    return resultados
