@@ -220,3 +220,6 @@ __marimo__/
 #json
 amazon_auth.json
 mercadolivre_auth.json
+shopee_auth.json
+
+.txt
