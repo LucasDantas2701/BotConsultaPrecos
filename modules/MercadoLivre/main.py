@@ -2,7 +2,9 @@ import os
 from playwright.async_api import async_playwright
 from modules.MercadoLivre.lista import ml_locators
 from shared.block_pass.humanizer import espera, mover_mouse, digitar_humano
-import time
+from modules.link_shortner.main import shortner
+from modules.item_filter.main import item_relevante
+
 state_path = "assets/mercadolivre_state.json"
 
 async def mercadolivre(pesquisa):
@@ -35,26 +37,43 @@ async def mercadolivre(pesquisa):
             mostrados = 0
             if await cards.count() > 0:
                 for i in range(await cards.count()):
+
                     if mostrados == 2:
                         break
+
                     try:
                         card = cards.nth(i)
-                        titulo = await card.locator(ml_locators["titulo"]).first.inner_text()
-                        price_label = await card.locator(ml_locators["preco"]).get_attribute("aria-label")
-                        preco = price_label.replace("Agora: ", "").replace(" reais com ", ",").replace(" centavos", "")
-                        link = await card.locator(ml_locators["link"]).first.get_attribute("href")
-                        link = link.split("#")[0]
-                        if not titulo or not preco or not link:
+
+                        titulo = await card.locator(
+                            ml_locators["titulo"]
+                        ).first.inner_text()
+                        if not item_relevante(pesquisa, titulo):
                             continue
-                        if link.startswith("/"):
-                            link = ml_locators["url"] + link
+
+                        price_label = await card.locator(
+                            ml_locators["preco"]
+                        ).get_attribute("aria-label")
+
+                        preco = (
+                            price_label
+                            .replace("Agora: ", "")
+                            .replace(" reais com ", ",")
+                            .replace(" centavos", "")
+                        )
+
+                        link = await card.locator("a.poly-component__title").get_attribute("href")
+                        link = shortner(link)
+
+                        # limpa rastreamento do Mercado Livre
                         resultado = (
                             f"🟨 MERCADO LIVRE\n\n"
                             f'<a href="{link}">{titulo}</a>\n'
                             f'💰 Preço: {preco}\n\n'
                         )
+
                         resultados.append(resultado)
                         mostrados += 1
+
                     except Exception as e:
                         print(e)
                         continue

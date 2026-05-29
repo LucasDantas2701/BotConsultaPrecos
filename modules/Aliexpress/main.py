@@ -2,6 +2,9 @@ import os
 from playwright.async_api import async_playwright
 from modules.Aliexpress.lista import aliexpress_locators
 from shared.block_pass.humanizer import espera, mover_mouse, digitar_humano
+from modules.link_shortner.main import shortner
+from modules.item_filter.main import item_relevante
+
 state_path = "assets/aliexpress_state.json"
 
 async def aliexpress(pesquisa):
@@ -47,6 +50,8 @@ async def aliexpress(pesquisa):
                     try:
                         card = cards.nth(i)
                         titulo =  await card.locator(aliexpress_locators["titulo"]).inner_text()
+                        if not item_relevante(pesquisa, titulo):
+                            continue
                         preco =  await card.locator(aliexpress_locators["preco"]).inner_text()
                         link =  await card.get_attribute("href")
                         if not titulo or not preco or not link:
@@ -55,6 +60,7 @@ async def aliexpress(pesquisa):
                             link = aliexpress_locators["url"] + link
                         elif link.startswith("/"):
                             link = "https://pt.aliexpress.com" + link
+                        link = shortner(link)
                         resultado = (
                             f"🟥 ALIEXPRESS\n\n"
                             f'<a href="{link}">{titulo}</a>\n'
